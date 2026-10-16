@@ -1,5 +1,21 @@
 import { useMemo } from 'react'
+import { ExternalLink } from 'lucide-react'
 import { median, topN } from '../utils/filters.js'
+import { ctgovUrl, ctgovTitle } from '../utils/ctgov.js'
+import { STATUS_GROUP_CONFIG } from '../utils/constants.js'
+
+/** Count that links to the equivalent ClinicalTrials.gov search (new tab). */
+function CountLink({ search, group, count, className = '' }) {
+  const link = ctgovUrl({ query: search.query, field: search.field, statuses: group ? STATUS_GROUP_CONFIG[group].statuses : [] })
+  const t = ctgovTitle(count, link)
+  return (
+    <a href={link.url} target="_blank" rel="noopener" title={t} aria-label={t}
+      className={`group relative inline-block cursor-pointer hover:text-blue-700 hover:underline underline-offset-2 ${className}`}>
+      {count.toLocaleString()}
+      <ExternalLink className="w-3 h-3 absolute -right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition" aria-hidden="true" />
+    </a>
+  )
+}
 
 const STAT_GROUPS = [
   { key: 'recruiting', label: 'Overall Recruiting', color: '#16a34a', bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-800' },
@@ -55,7 +71,7 @@ export default function ComparisonSummary({ searches }) {
             <td className="py-2 pr-4 text-xs text-slate-500 font-medium">Total fetched</td>
             {counts.map((c, i) => (
               <td key={i} className="py-2 px-3 text-right font-bold text-slate-700">
-                {c.total.toLocaleString()}
+                <CountLink search={searches[i]} count={c.total} />
               </td>
             ))}
           </tr>
@@ -68,7 +84,7 @@ export default function ComparisonSummary({ searches }) {
               </td>
               {counts.map((c, i) => (
                 <td key={i} className="py-2 px-3 text-right">
-                  <span className="font-semibold text-slate-700">{c[g.key].toLocaleString()}</span>
+                  <CountLink search={searches[i]} group={g.key} count={c[g.key]} className="font-semibold text-slate-700" />
                   <span className="ml-1.5 text-xs text-slate-500">
                     {c.total > 0 ? `${((c[g.key] / c.total) * 100).toFixed(1)}%` : '—'}
                   </span>

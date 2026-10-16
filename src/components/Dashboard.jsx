@@ -80,7 +80,7 @@ export default function Dashboard({ entry, filters, setFilters, filtered, sorted
         </div>
       )}
 
-      <KpiStrip records={filtered} unfilteredTotal={records.length} filters={filters}
+      <KpiStrip query={entry.query} field={entry.field} records={filtered} unfilteredTotal={records.length} filters={filters}
         onFilter={(dim, vals) => set({ [dim]: vals })} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
