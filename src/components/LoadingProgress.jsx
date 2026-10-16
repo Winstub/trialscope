@@ -1,31 +1,52 @@
-export default function LoadingProgress({ loaded, total, query }) {
-  const pct = total > 0 ? Math.round((loaded / total) * 100) : 0
+import { Loader2, X } from 'lucide-react'
 
+function Sk({ className = '' }) { return <div className={`skeleton ${className}`} aria-hidden="true" /> }
+
+export function DashboardSkeleton() {
   return (
-    <div className="card p-8 text-center space-y-4">
-      <div className="flex justify-center">
-        <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+    <div className="space-y-4" aria-hidden="true">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="card p-4 space-y-3"><Sk className="h-3 w-16" /><Sk className="h-7 w-20" /><Sk className="h-3 w-24" /></div>
+        ))}
       </div>
-      <div>
-        <p className="font-semibold text-slate-700">Fetching trials for <span className="text-blue-700">"{query}"</span></p>
-        {total > 0 && (
-          <p className="text-sm text-slate-500 mt-1">
-            {loaded.toLocaleString()} of {total.toLocaleString()} studies loaded
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="card p-5 space-y-3"><Sk className="h-4 w-32" /><Sk className="h-44 w-full" /></div>
+        ))}
+      </div>
+      <div className="card p-5 space-y-3"><Sk className="h-4 w-48" /><Sk className="h-48 w-full" /></div>
+    </div>
+  )
+}
+
+export default function LoadingProgress({ loaded, total, query, page, retry, onCancel }) {
+  const pct = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0
+  return (
+    <div className="card p-5" role="status" aria-live="polite">
+      <div className="flex items-center gap-3">
+        <Loader2 className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0" aria-hidden="true" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-800 truncate">
+            Fetching trials for <span className="text-blue-700">“{query}”</span>
           </p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {retry
+              ? `ClinicalTrials.gov asked us to slow down — retrying (attempt ${retry.attempt}) in ${Math.ceil(retry.waitMs / 1000)}s…`
+              : total > 0
+                ? `${loaded.toLocaleString()} of ${total.toLocaleString()} studies loaded${page ? ` · page ${page}` : ''}`
+                : 'Contacting ClinicalTrials.gov…'}
+          </p>
+        </div>
+        {onCancel && (
+          <button type="button" onClick={onCancel} className="btn-secondary text-xs flex items-center gap-1 !py-1.5">
+            <X className="w-3 h-3" aria-hidden="true" /> Cancel
+          </button>
         )}
       </div>
-      {total > 0 && (
-        <div className="max-w-sm mx-auto">
-          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-500 rounded-full transition-all duration-300 progress-pulse"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <p className="text-xs text-slate-400 mt-1">{pct}%</p>
-        </div>
-      )}
-      <p className="text-xs text-slate-400">Querying ClinicalTrials.gov API v2 — this may take a moment for large result sets</p>
+      <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label="Loading progress">
+        <div className={`h-full bg-blue-600 rounded-full transition-all duration-300 ${total === 0 ? 'w-1/4 progress-pulse' : ''}`} style={total > 0 ? { width: `${pct}%` } : undefined} />
+      </div>
     </div>
   )
 }
