@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { PHASE_CONFIG, PHASE_ORDER, STATUS_CONFIG, STATUS_ORDER, DIMENSION_CONFIG } from '../utils/constants.js'
 import { formatDate } from '../utils/api.js'
+import { isEnrollmentOutlier } from '../utils/filters.js'
 
 const PAGE_SIZE = 25
 
@@ -73,6 +74,7 @@ const sponsorTone = c => (c === 'INDUSTRY' ? 'bg-blue-500' : c === 'NIH' || c ==
 
 function Enroll({ r }) {
   if (!r.enrollment) return <span className="text-slate-500">—</span>
+  if (isEnrollmentOutlier(r.enrollment)) return <span className="text-amber-700" title="Implausible reported value — excluded from enrollment totals, median and distribution">{r.enrollment.toLocaleString()}<span aria-hidden="true"> ⚠</span><span className="sr-only"> (implausible, excluded from totals)</span></span>
   return <span title={r.enrollmentType === 'ESTIMATED' ? 'Estimated enrollment' : 'Actual enrollment'}>{r.enrollment.toLocaleString()}{r.enrollmentType === 'ESTIMATED' && <span className="text-slate-500">*</span>}</span>
 }
 

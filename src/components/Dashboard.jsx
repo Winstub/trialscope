@@ -8,7 +8,7 @@ import PhaseStatusMatrix from './PhaseStatusMatrix.jsx'
 import TrialTable from './TrialTable.jsx'
 import GroupedDimensionChart from './GroupedDimensionChart.jsx'
 import { aggregateStudies } from '../utils/api.js'
-import { ENROLLMENT_BINS, EMPTY_FILTERS, enrollmentBin, facet, hasFilters, passes, topN } from '../utils/filters.js'
+import { ENROLLMENT_BINS, EMPTY_FILTERS, enrollmentBin, facet, hasFilters, isEnrollmentOutlier, topN } from '../utils/filters.js'
 import { DIMENSION_CONFIG, PHASE_CONFIG, PHASE_ORDER, STATUS_CONFIG } from '../utils/constants.js'
 
 const EXPLORER_DIMS = ['route', 'interventionType', 'studyType', 'primaryPurpose', 'ageGroup', 'sex', 'masking', 'allocation']
@@ -19,17 +19,18 @@ export default function Dashboard({ entry, filters, setFilters, filtered, sorted
   const set = (patch) => setFilters(f => ({ ...f, ...patch }))
   const toggle = dim => key => set({ [dim]: toggleIn(filters[dim], key) })
 
-  const statusCounts = useMemo(() => facet(records, filters, ['status'], r => r.status), [records, filters])
-  const phaseCounts  = useMemo(() => facet(records, filters, ['phase'], r => r.phases), [records, filters])
-  const clsCounts    = useMemo(() => facet(records, filters, ['cls'], r => r.sponsorClass), [records, filters])
-  const sponsorCounts = useMemo(() => facet(records, filters, ['sponsor'], r => r.sponsor), [records, filters])
-  const countryCounts = useMemo(() => facet(records, filters, ['country'], r => r.countries), [records, filters])
-  const enrCounts    = useMemo(() => facet(records, filters, ['enr'], r => enrollmentBin(r.enrollment)), [records, filters])
-  const condCounts   = useMemo(() => facet(records, filters, ['text'], r => r.conditions.map(c => c.trim())), [records, filters])
+  const statusCounts = useMemo(() => facet(filtered, EMPTY_FILTERS, [], r => r.status), [filtered])
+  const phaseCounts  = useMemo(() => facet(filtered, EMPTY_FILTERS, [], r => r.phases), [filtered])
+  const clsCounts    = useMemo(() => facet(filtered, EMPTY_FILTERS, [], r => r.sponsorClass), [filtered])
+  const sponsorCounts = useMemo(() => facet(filtered, EMPTY_FILTERS, [], r => r.sponsor), [filtered])
+  const countryCounts = useMemo(() => facet(filtered, EMPTY_FILTERS, [], r => r.countries), [filtered])
+  const enrCounts    = useMemo(() => facet(filtered, EMPTY_FILTERS, [], r => enrollmentBin(r.enrollment)), [filtered])
+  const condCounts   = useMemo(() => facet(filtered, EMPTY_FILTERS, [], r => r.conditions.map(c => c.trim())), [filtered])
 
-  const timeline = useMemo(() => aggregateStudies(records.filter(r => passes(r, filters, ['year']))).timelineByYear, [records, filters])
-  const matrix   = useMemo(() => aggregateStudies(records.filter(r => passes(r, filters, ['phase', 'status']))).phaseStatusMatrix, [records, filters])
-  const stats    = useMemo(() => aggregateStudies(filtered), [filtered])
+      const stats    = useMemo(() => aggregateStudies(filtered), [filtered])
+  const timeline = stats.timelineByYear
+  const matrix   = stats.phaseStatusMatrix
+  const enrOutliers = useMemo(() => filtered.reduce((n, r) => n + (isEnrollmentOutlier(r.enrollment) ? 1 : 0), 0), [filtered])
 
   const phaseItems = PHASE_ORDER.filter(k => phaseCounts.get(k)).map(k => ({ key: k, label: PHASE_CONFIG[k].label, count: phaseCounts.get(k), color: PHASE_CONFIG[k].color }))
   const cfg = DIMENSION_CONFIG.sponsorClass
@@ -94,7 +95,8 @@ export default function Dashboard({ entry, filters, setFilters, filtered, sorted
           <TimelineChart timelineByYear={timeline} yearFrom={filters.yearFrom} yearTo={filters.yearTo}
             onSelectYear={selectYear} onClear={() => set({ yearFrom: null, yearTo: null })} />
         </div>
-        <FacetList title="Enrollment size" subtitle="Participants per trial" items={enrItems} selected={filters.enr} onToggle={toggle('enr')} maxRows={10} />
+        <FacetList title="Enrollment size" subtitle="Participants per trial" items={enrItems} selected={filters.enr} onToggle={toggle('enr')} maxRows={10}
+          footnote={enrOutliers ? `${enrOutliers} trial${enrOutliers > 1 ? 's' : ''} with implausible enrollment (≥10M or placeholder values) excluded.` : undefined} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

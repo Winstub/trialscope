@@ -251,19 +251,19 @@ export default function App() {
                 : hasResults ? 'Add a search to compare…' : undefined}
             />
             {hasResults && (
-              <div className="flex items-center gap-2 flex-wrap lg:ml-auto lg:pt-0.5">
-                <button type="button" onClick={copyLink} className="btn-secondary flex items-center gap-1.5 text-sm" title="Copy a shareable link to this exact view">
+              <div className="flex items-center gap-2 lg:ml-auto lg:pt-0.5" role="toolbar" aria-label="Share and export">
+                <button type="button" onClick={copyLink} className="btn-secondary flex items-center gap-1.5 text-sm max-sm:flex-1 max-sm:justify-center max-sm:!px-2" title="Copy a shareable link to this exact view" aria-label={copied ? 'Link copied' : 'Copy shareable link'}>
                   {copied ? <Check className="w-4 h-4 text-green-600" aria-hidden="true" /> : <Link2 className="w-4 h-4" aria-hidden="true" />}
-                  {copied ? 'Link copied' : 'Share'}
+                  <span className="max-sm:sr-only">{copied ? 'Link copied' : 'Share'}</span>
                 </button>
-                <button type="button" onClick={handleExport} disabled={loading || (!showCompare && !activeResult)} className="btn-secondary flex items-center gap-1.5 text-sm">
-                  <Download className="w-4 h-4" aria-hidden="true" /> CSV
+                <button type="button" onClick={handleExport} disabled={loading || (!showCompare && !activeResult)} className="btn-secondary flex items-center gap-1.5 text-sm max-sm:flex-1 max-sm:justify-center max-sm:!px-2" aria-label="Export CSV">
+                  <Download className="w-4 h-4" aria-hidden="true" /> <span className="max-sm:sr-only">CSV</span>
                 </button>
-                <button type="button" onClick={() => window.print()} className="btn-secondary flex items-center gap-1.5 text-sm" title="Print or save as PDF">
-                  <Printer className="w-4 h-4" aria-hidden="true" /> Print / PDF
+                <button type="button" onClick={() => window.print()} className="btn-secondary flex items-center gap-1.5 text-sm max-sm:flex-1 max-sm:justify-center max-sm:!px-2" title="Print or save as PDF" aria-label="Print or save as PDF">
+                  <Printer className="w-4 h-4" aria-hidden="true" /> <span className="max-sm:sr-only">Print / PDF</span>
                 </button>
-                <button type="button" onClick={clearAll} className="btn-secondary flex items-center gap-1.5 text-sm text-slate-600">
-                  <X className="w-3.5 h-3.5" aria-hidden="true" /> Clear
+                <button type="button" onClick={clearAll} className="btn-secondary flex items-center gap-1.5 text-sm text-slate-600 max-sm:flex-1 max-sm:justify-center max-sm:!px-2" aria-label="Clear all searches">
+                  <X className="w-3.5 h-3.5" aria-hidden="true" /> <span className="max-sm:sr-only">Clear</span>
                 </button>
               </div>
             )}

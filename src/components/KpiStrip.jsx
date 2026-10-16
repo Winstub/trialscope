@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { FlaskConical, PlayCircle, Rocket, Building2, Users, Globe2 } from 'lucide-react'
-import { median } from '../utils/filters.js'
+import { median, validEnrollment, isEnrollmentOutlier } from '../utils/filters.js'
 import { fmt, fmtCompact, pct } from '../utils/format.js'
 
 function Kpi({ icon: Icon, label, value, sub, tone = 'slate', onClick, active, title }) {
@@ -29,17 +29,19 @@ const OPEN = ['NOT_YET_RECRUITING', 'RECRUITING', 'ENROLLING_BY_INVITATION', 'AV
 export default function KpiStrip({ records, unfilteredTotal, filters, onFilter }) {
   const k = useMemo(() => {
     const n = records.length
-    let open = 0, late = 0, industry = 0, enrollSum = 0, enrollN = 0
+    let open = 0, late = 0, industry = 0, enrollSum = 0, enrollN = 0, outliers = 0
     const countries = new Set(), sponsors = new Set(), enr = []
     for (const r of records) {
       if (OPEN.includes(r.status)) open++
       if (r.phases.includes('PHASE3') || r.phases.includes('PHASE4')) late++
       if (r.sponsorClass === 'INDUSTRY') industry++
-      if (r.enrollment > 0) { enrollSum += r.enrollment; enrollN++; enr.push(r.enrollment) }
+      if (isEnrollmentOutlier(r.enrollment)) outliers++
+      const ev = validEnrollment(r.enrollment)
+      if (ev) { enrollSum += ev; enrollN++; enr.push(ev) }
       r.countries.forEach(c => countries.add(c))
       sponsors.add(r.sponsor)
     }
-    return { n, open, late, industry, enrollSum, enrollN, medEnroll: median(enr), countries: countries.size, sponsors: sponsors.size }
+    return { n, open, late, industry, enrollSum, enrollN, outliers, medEnroll: median(enr), countries: countries.size, sponsors: sponsors.size }
   }, [records])
 
   const openActive = filters.status.length === OPEN.length && OPEN.every(s => filters.status.includes(s))
@@ -60,8 +62,8 @@ export default function KpiStrip({ records, unfilteredTotal, filters, onFilter }
         sub={`${fmt(k.industry)} industry · ${fmt(k.n - k.industry)} academic & other`}
         onClick={() => onFilter('cls', industryActive ? [] : ['INDUSTRY'])} active={industryActive} />
       <Kpi icon={Users} tone="amber" label="Total enrollment" value={fmtCompact(k.enrollSum)}
-        sub={k.medEnroll ? `median ${fmt(Math.round(k.medEnroll))} per trial` : 'no enrollment data'}
-        title="Sum of actual + planned participants across trials reporting enrollment" />
+        sub={`${k.medEnroll ? `median ${fmt(Math.round(k.medEnroll))} per trial` : 'no enrollment data'}${k.outliers ? ` · ${fmt(k.outliers)} outlier${k.outliers > 1 ? 's' : ''} excluded` : ''}`}
+        title={`Sum of actual + planned participants across trials reporting enrollment.${k.outliers ? ` Excludes ${k.outliers} trial(s) with implausible values (10M or more, or placeholders like 99,999,999).` : ''}`} />
       <Kpi icon={Globe2} tone="teal" label="Reach" value={`${fmt(k.countries)} countries`}
         sub={`${fmt(k.sponsors)} distinct sponsors`} />
     </section>

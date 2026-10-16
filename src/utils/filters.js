@@ -14,7 +14,16 @@ export const ENROLLMENT_BINS = [
   { key: 'na', label: 'Not reported', min: null, max: null },
 ]
 
+/** Implausible enrollment (>= 10M, or all-nines placeholders such as 99,999,999). Excluded from totals/medians/distribution. */
+export function isEnrollmentOutlier(n) {
+  return Number.isFinite(n) && (n >= 10_000_000 || (n >= 99_999 && /^9+$/.test(String(n))))
+}
+
+/** Enrollment safe to aggregate, or null. */
+export const validEnrollment = n => (Number.isFinite(n) && n > 0 && !isEnrollmentOutlier(n) ? n : null)
+
 export function enrollmentBin(n) {
+  if (isEnrollmentOutlier(n)) return 'out'
   if (n === null || n === undefined || n <= 0) return 'na'
   return ENROLLMENT_BINS.find(b => b.min !== null && n >= b.min && n <= b.max)?.key ?? 'na'
 }
