@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { axisLabel, isNarrow } from '../utils/format.js'
 
 const GROUP_META = {
   recruiting: { label: 'Overall Recruiting',    color: '#16a34a' },
@@ -28,7 +29,7 @@ const CustomTooltip = ({ active, payload, label }) => {
       ))}
       {payload.length > 1 && (
         <div className="flex justify-between gap-6 text-xs mt-2 pt-2 border-t border-slate-100">
-          <span className="text-slate-400">Shown subtotal</span>
+          <span className="text-slate-500">Shown subtotal</span>
           <span className="font-bold text-slate-700">{shown.toLocaleString()}</span>
         </div>
       )}
@@ -88,13 +89,14 @@ export default function GroupedDimensionChart({
     <div className="card overflow-hidden">
       {/* Header row — always visible, click to expand */}
       <button
+        aria-expanded={expanded}
         onClick={() => setExpanded(e => !e)}
         className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 transition-colors"
       >
         <div className="flex items-center gap-3 min-w-0">
           <div>
             <span className="font-semibold text-slate-800">{config.title}</span>
-            <span className="ml-2 text-xs text-slate-400 hidden sm:inline">{config.description}</span>
+            <span className="ml-2 text-xs text-slate-500 hidden sm:inline">{config.description}</span>
           </div>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0 ml-4">
@@ -102,11 +104,11 @@ export default function GroupedDimensionChart({
           {!expanded && topLabel && (
             <span className="text-xs text-slate-500 hidden md:block">
               Top: <span className="font-semibold" style={{ color: topLabel.color }}>{topLabel.label}</span>
-              <span className="ml-1 text-slate-400">({topLabel.total.toLocaleString()})</span>
+              <span className="ml-1 text-slate-500">({topLabel.total.toLocaleString()})</span>
             </span>
           )}
-          <span className="text-xs text-slate-400">{data.length} categories</span>
-          {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          <span className="text-xs text-slate-500">{data.length} categories</span>
+          {expanded ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
         </div>
       </button>
 
@@ -121,6 +123,7 @@ export default function GroupedDimensionChart({
                 <button
                   key={key}
                   onClick={() => toggleGroup(key)}
+                  aria-pressed={isActive}
                   className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all"
                   style={isActive
                     ? { backgroundColor: color, borderColor: color, color: '#fff' }
@@ -139,7 +142,7 @@ export default function GroupedDimensionChart({
             <BarChart data={data} layout="vertical" barCategoryGap="28%" barGap={3}
               margin={{ left: 0, right: 56, top: 2, bottom: 2 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-              <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }}
+              <XAxis type="number" tick={{ fontSize: 11, fill: '#475569' }}
                 tickLine={false} axisLine={false} tickFormatter={v => v.toLocaleString()} />
               <YAxis type="category" dataKey="label"
                 tick={({ x, y, payload }) => {
@@ -148,11 +151,11 @@ export default function GroupedDimensionChart({
                     <text x={x - 6} y={y} dy={4} textAnchor="end"
                       fontSize={11} fontWeight={500}
                       fill={d?.isUnknown ? '#94a3b8' : '#475569'}>
-                      {payload.value}
+                      <title>{payload.value}</title>{axisLabel(payload.value)}
                     </text>
                   )
                 }}
-                tickLine={false} axisLine={false} width={140} />
+                tickLine={false} axisLine={false} width={isNarrow() ? 96 : 150} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
               {activeGroups.has('recruiting') && (
                 <Bar dataKey="recruiting" name={GROUP_META.recruiting.label}
@@ -170,7 +173,7 @@ export default function GroupedDimensionChart({
           </ResponsiveContainer>
 
           {config.unknownKey && grandTotal > specifiedTotal && (
-            <p className="text-xs text-slate-400 mt-2">
+            <p className="text-xs text-slate-500 mt-2">
               * {(grandTotal - specifiedTotal).toLocaleString()} studies had no extractable data — shown as "{config.unknownKey}" above
             </p>
           )}
