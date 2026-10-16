@@ -44,7 +44,7 @@ export default function ComparisonView({ searches }) {
         >
           {normalize ? '% Share' : 'Count'}
         </button>
-        <span className="text-xs text-slate-400 hidden md:block">
+        <span className="text-xs text-slate-500 hidden md:block">
           Showing {normalize ? 'percentage share within each intervention' : 'raw counts'} for "{GROUP_FILTERS.find(f => f.key === groupFilter)?.label}"
         </span>
       </div>

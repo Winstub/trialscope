@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { axisLabel, isNarrow } from '../utils/format.js'
+import { statusGroup } from '../utils/api.js'
 
 const UNKNOWN_KEYS = new Set(['UNKNOWN','Unknown','Not Specified','NA','N/A'])
 
@@ -11,7 +13,7 @@ const GROUP_FILTER_META = {
   no_longer:  { label: 'No Longer Rec.',     keys: ['no_longer'] },
 }
 
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label, normalize }) => {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-xl px-3 py-2.5 text-sm min-w-[200px]">
@@ -23,9 +25,7 @@ const CustomTooltip = ({ active, payload, label }) => {
             {p.name}
           </span>
           <span className="font-semibold text-slate-700">
-            {typeof p.value === 'number' && p.value % 1 !== 0
-              ? `${p.value.toFixed(1)}%`
-              : (p.value ?? 0).toLocaleString()}
+            {normalize ? `${(p.value ?? 0).toFixed(1)}%` : (p.value ?? 0).toLocaleString()}
           </span>
         </div>
       ))}
@@ -42,10 +42,12 @@ function getVal(byGroup, catKey, groupFilter, normalize, total) {
   return total > 0 ? (raw / total) * 100 : 0
 }
 
-function getTotal(byGroup, groupFilter) {
-  if (!byGroup) return 0
+/** Number of trials (not category mentions) in the selected recruitment group — the % denominator. */
+function getTotal(stats, groupFilter) {
   const keys = GROUP_FILTER_META[groupFilter].keys
-  return Object.values(byGroup).reduce((s, g) => s + keys.reduce((ss, k) => ss + (g[k] ?? 0), 0), 0)
+  return Object.entries(stats.statusCounts)
+    .filter(([status]) => keys.includes(statusGroup(status)))
+    .reduce((sum, [, n]) => sum + n, 0)
 }
 
 export default function ComparisonDimensionChart({
@@ -71,13 +73,13 @@ export default function ComparisonDimensionChart({
       const row = { key, label, isUnknown }
       let maxVal = 0
       searches.forEach(s => {
-        const total = normalize ? getTotal(s.stats.dimByGroup?.[dimKey], groupFilter) : 0
+        const total = normalize ? getTotal(s.stats, groupFilter) : 0
         const v = getVal(s.stats.dimByGroup?.[dimKey], key, groupFilter, normalize, total)
         row[s.id] = v
         if (v > maxVal) maxVal = v
       })
       row._total = searches.reduce((sum, s) => {
-        const total = normalize ? getTotal(s.stats.dimByGroup?.[dimKey], groupFilter) : 0
+        const total = normalize ? getTotal(s.stats, groupFilter) : 0
         return sum + getVal(s.stats.dimByGroup?.[dimKey], key, groupFilter, normalize, total)
       }, 0)
       return row
@@ -98,13 +100,14 @@ export default function ComparisonDimensionChart({
   return (
     <div className="card overflow-hidden">
       <button
+        aria-expanded={expanded}
         onClick={() => setExpanded(e => !e)}
         className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 transition-colors"
       >
         <div className="flex items-center gap-3 min-w-0">
           <div>
             <span className="font-semibold text-slate-800">{config.title}</span>
-            <span className="ml-2 text-xs text-slate-400 hidden sm:inline">{config.description}</span>
+            <span className="ml-2 text-xs text-slate-500 hidden sm:inline">{config.description}</span>
           </div>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0 ml-4">
@@ -113,8 +116,8 @@ export default function ComparisonDimensionChart({
               Top: <span className="font-semibold text-slate-700">{topLabel.label}</span>
             </span>
           )}
-          <span className="text-xs text-slate-400">{data.length} categories</span>
-          {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          <span className="text-xs text-slate-500">{data.length} categories</span>
+          {expanded ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
         </div>
       </button>
 
@@ -124,9 +127,9 @@ export default function ComparisonDimensionChart({
             <BarChart data={data} layout="vertical" barCategoryGap="30%" barGap={2}
               margin={{ left: 0, right: 56, top: 2, bottom: 2 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-              <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }}
+              <XAxis type="number" tick={{ fontSize: 11, fill: '#475569' }}
                 tickLine={false} axisLine={false}
-                tickFormatter={v => normalize ? `${v.toFixed(0)}%` : v.toLocaleString()} />
+                tickFormatter={v => normalize ? `${v.toFixed(0)}%` : v.toLocaleString()} domain={normalize ? [0, 100] : [0, 'auto']} />
               <YAxis type="category" dataKey="label"
                 tick={({ x, y, payload }) => {
                   const d = data.find(r => r.label === payload.value)
@@ -134,12 +137,12 @@ export default function ComparisonDimensionChart({
                     <text x={x - 6} y={y} dy={4} textAnchor="end"
                       fontSize={11} fontWeight={500}
                       fill={d?.isUnknown ? '#94a3b8' : '#475569'}>
-                      {payload.value}
+                      <title>{payload.value}</title>{axisLabel(payload.value)}
                     </text>
                   )
                 }}
-                tickLine={false} axisLine={false} width={140} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+                tickLine={false} axisLine={false} width={isNarrow() ? 96 : 150} />
+              <Tooltip content={<CustomTooltip normalize={normalize} />} cursor={{ fill: '#f8fafc' }} />
               {searches.map(s => (
                 <Bar key={s.id} dataKey={s.id} name={s.query}
                   fill={s.color} radius={[0, 4, 4, 0]} maxBarSize={16} />

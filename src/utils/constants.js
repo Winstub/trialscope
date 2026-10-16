@@ -8,6 +8,9 @@ export const STATUS_CONFIG = {
   SUSPENDED:              { label: 'Suspended',                color: '#f97316', group: 'no_longer' },
   WITHDRAWN:              { label: 'Withdrawn',                color: '#f59e0b', group: 'no_longer' },
   UNKNOWN:                    { label: 'Unknown',                   color: '#94a3b8', group: 'no_longer' },
+  AVAILABLE:                  { label: 'Available (Expanded Access)', color: '#14b8a6', group: 'recruiting' },
+  APPROVED_FOR_MARKETING:     { label: 'Approved for Marketing',    color: '#a855f7', group: 'no_longer' },
+  WITHHELD:                   { label: 'Withheld',                  color: '#d6d3d1', group: 'no_longer' },
   NO_LONGER_AVAILABLE:        { label: 'No Longer Available',       color: '#78716c', group: 'no_longer' },
   TEMPORARILY_NOT_AVAILABLE:  { label: 'Temporarily Not Available', color: '#a8a29e', group: 'no_longer' },
 }
@@ -21,7 +24,7 @@ export const STATUS_GROUP_CONFIG = {
     border: 'border-green-200',
     text: 'text-green-800',
     badge: 'bg-green-100 text-green-800',
-    statuses: ['NOT_YET_RECRUITING', 'RECRUITING', 'ENROLLING_BY_INVITATION'],
+    statuses: ['NOT_YET_RECRUITING', 'RECRUITING', 'ENROLLING_BY_INVITATION', 'AVAILABLE'],
   },
   active: {
     label: 'Active, Not Recruiting',
@@ -41,7 +44,7 @@ export const STATUS_GROUP_CONFIG = {
     border: 'border-slate-200',
     text: 'text-slate-700',
     badge: 'bg-slate-100 text-slate-700',
-    statuses: ['COMPLETED', 'TERMINATED', 'SUSPENDED', 'WITHDRAWN', 'UNKNOWN', 'NO_LONGER_AVAILABLE', 'TEMPORARILY_NOT_AVAILABLE'],
+    statuses: ['COMPLETED', 'TERMINATED', 'SUSPENDED', 'WITHDRAWN', 'UNKNOWN', 'NO_LONGER_AVAILABLE', 'TEMPORARILY_NOT_AVAILABLE', 'APPROVED_FOR_MARKETING', 'WITHHELD'],
   },
 }
 
@@ -77,10 +80,10 @@ export const ROUTE_CONFIG = {
 }
 
 export const STATUS_ORDER = [
-  'NOT_YET_RECRUITING', 'RECRUITING', 'ENROLLING_BY_INVITATION',
+  'NOT_YET_RECRUITING', 'RECRUITING', 'ENROLLING_BY_INVITATION', 'AVAILABLE',
   'ACTIVE_NOT_RECRUITING',
   'COMPLETED', 'TERMINATED', 'SUSPENDED', 'WITHDRAWN', 'UNKNOWN',
-  'NO_LONGER_AVAILABLE', 'TEMPORARILY_NOT_AVAILABLE',
+  'NO_LONGER_AVAILABLE', 'TEMPORARILY_NOT_AVAILABLE', 'APPROVED_FOR_MARKETING', 'WITHHELD',
 ]
 
 // ─── Dimensions Explorer config ───────────────────────────────────────────────
@@ -143,7 +146,7 @@ export const DIMENSION_CONFIG = {
     title: 'Sponsor / Funder Type',
     description: 'Lead sponsor funding source',
     order: ['INDUSTRY','NIH','FED','OTHER_GOV','NETWORK','INDIV','OTHER','UNKNOWN'],
-    labels: { INDUSTRY:'Industry', NIH:'NIH', FED:'Federal', OTHER_GOV:'Other Government', NETWORK:'Network', INDIV:'Individual', OTHER:'Other', UNKNOWN:'Unknown' },
+    labels: { INDUSTRY:'Industry', NIH:'NIH', FED:'Federal', OTHER_GOV:'Other Government', NETWORK:'Network', INDIV:'Individual', OTHER:'Academic / Other', UNKNOWN:'Unknown' },
     colors: { INDUSTRY:'#2563eb', NIH:'#16a34a', FED:'#0891b2', OTHER_GOV:'#0f766e', NETWORK:'#7c3aed', INDIV:'#d97706', OTHER:'#6b7280', UNKNOWN:'#94a3b8' },
   },
   primaryPurpose: {

@@ -4,39 +4,63 @@
 
 @layer base {
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
     @apply bg-slate-50 text-slate-800 antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
   }
+  :focus-visible { @apply outline-none ring-2 ring-blue-600 ring-offset-2 ring-offset-white rounded-md; }
+  input:focus-visible, select:focus-visible { @apply ring-offset-0; }
+  .on-dark :focus-visible { @apply ring-offset-slate-900; }
 }
 
 @layer components {
-  .card {
-    @apply bg-white rounded-xl shadow-sm border border-slate-200;
-  }
+  .card { @apply bg-white rounded-2xl shadow-sm border border-slate-200/80; }
+  .card-title { @apply text-sm font-semibold text-slate-900; }
+  .card-sub { @apply text-xs text-slate-500 mt-0.5; }
   .btn-primary {
-    @apply bg-blue-700 hover:bg-blue-800 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-blue-700 hover:bg-blue-800 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-secondary {
-    @apply bg-white hover:bg-slate-50 text-slate-700 font-medium px-4 py-2 rounded-lg border border-slate-300 transition-colors;
+    @apply bg-white hover:bg-slate-50 text-slate-700 font-medium px-3.5 py-2 rounded-xl border border-slate-300 transition-colors disabled:opacity-50;
   }
-  .tag {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold;
+  .tag { @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold; }
+  .skeleton {
+    @apply rounded-lg bg-slate-200/70 relative overflow-hidden;
+  }
+  .skeleton::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.65), transparent);
+    transform: translateX(-100%); animation: shimmer 1.4s infinite;
   }
 }
 
-/* Recharts tooltip override */
-.recharts-tooltip-wrapper { z-index: 50 !important; }
+@keyframes shimmer { to { transform: translateX(100%); } }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+.recharts-tooltip-wrapper { z-index: 50 !important; }
+.recharts-surface:focus, .recharts-wrapper:focus { outline: none; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { @apply bg-slate-100; }
 ::-webkit-scrollbar-thumb { @apply bg-slate-300 rounded-full; }
 ::-webkit-scrollbar-thumb:hover { @apply bg-slate-400; }
 
-/* Progress bar animation */
-@keyframes progress-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
+@keyframes progress-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .7; } }
 .progress-pulse { animation: progress-pulse 1.5s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
+
+/* ── Print / "Save as PDF" ───────────────────────────────────────────────── */
+.print-only { display: none; }
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  .card { box-shadow: none !important; break-inside: avoid; page-break-inside: avoid; }
+  main { max-width: none !important; padding: 0 !important; }
+  .print-break { break-before: page; }
+}

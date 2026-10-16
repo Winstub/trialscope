@@ -50,11 +50,13 @@ export default function ComparisonTimeline({ searches, groupFilter }) {
 
   function handleFrom(e) {
     const v = parseInt(e.target.value, 10)
+    if (Number.isNaN(v)) return
     setFromYear(v)
     if (v > toYear) setToYear(v)
   }
   function handleTo(e) {
     const v = parseInt(e.target.value, 10)
+    if (Number.isNaN(v)) return
     setToYear(v)
     if (v < fromYear) setFromYear(v)
   }
@@ -83,14 +85,14 @@ export default function ComparisonTimeline({ searches, groupFilter }) {
       <div className="flex items-start justify-between mb-3 flex-wrap gap-3">
         <div>
           <h3 className="font-semibold text-slate-800">Trial Start Date Timeline</h3>
-          <p className="text-xs text-slate-400 mt-0.5">Studies started per year — one line per intervention</p>
+          <p className="text-xs text-slate-500 mt-0.5">Studies started per year — one line per intervention</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
             <label className="text-xs text-slate-500 font-medium whitespace-nowrap">From</label>
             <input type="number" value={fromYear} min={minYear} max={toYear} onChange={handleFrom}
               className="w-16 text-sm font-semibold text-slate-700 bg-transparent border-none outline-none text-center" />
-            <span className="text-slate-300">—</span>
+            <span className="text-slate-400">—</span>
             <label className="text-xs text-slate-500 font-medium whitespace-nowrap">To</label>
             <input type="number" value={toYear} min={fromYear} max={maxYear} onChange={handleTo}
               className="w-16 text-sm font-semibold text-slate-700 bg-transparent border-none outline-none text-center" />
@@ -112,9 +114,9 @@ export default function ComparisonTimeline({ searches, groupFilter }) {
               <ReferenceLine x={String(CURRENT_YEAR)} stroke="#f59e0b" strokeDasharray="4 3" strokeWidth={1.5}
                 label={{ value: `${CURRENT_MONTH} mo`, position: 'insideTopRight', fontSize: 10, fill: '#f59e0b', fontWeight: 600 }} />
             )}
-            <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false}
+            <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#475569' }} tickLine={false} axisLine={false}
               interval={chartData.length > 20 ? 'preserveStartEnd' : 0} />
-            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false}
+            <YAxis tick={{ fontSize: 11, fill: '#475569' }} tickLine={false} axisLine={false}
               tickFormatter={v => v.toLocaleString()} />
             <Tooltip content={<CustomTooltip />} />
             <Legend iconType="circle" iconSize={8}
@@ -131,7 +133,7 @@ export default function ComparisonTimeline({ searches, groupFilter }) {
           </LineChart>
         </ResponsiveContainer>
       ) : (
-        <div className="h-48 flex items-center justify-center text-slate-400 text-sm">
+        <div className="h-48 flex items-center justify-center text-slate-500 text-sm">
           No studies with start dates in {fromYear}–{toYear}
         </div>
       )}
