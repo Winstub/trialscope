@@ -1,3 +1,6 @@
+import { resolveTarget, candidateQueries } from './targetResolve.js'
+import { classifyTrial, extractStudyText } from './target.js'
+
 const BASE_URL = 'https://clinicaltrials.gov/api/v2/studies'
 const PAGE_SIZE = 1000
 const MAX_PAGES = 20 // 20k studies max per search
@@ -82,6 +85,8 @@ export const SEARCH_FIELDS = {
   intr: { label: 'Intervention', param: 'query.intr', placeholder: 'Search an intervention or treatment…' },
   cond: { label: 'Condition',    param: 'query.cond', placeholder: 'Search a disease or condition…' },
   term: { label: 'Any term',     param: 'query.term', placeholder: 'Search any term…' },
+  // Molecular target (PD-1, VEGF, HER2…): resolved to synonyms + drug names, then every trial is labelled Targets / Measures only / Unclear.
+  target: { label: 'Target',     param: null,         placeholder: 'Search a molecular target, e.g. PD-1, VEGF, HER2, CD19…' },
 }
 
 const FIELDS = [
@@ -90,6 +95,12 @@ const FIELDS = [
   'StudyType', 'LeadSponsorName', 'LeadSponsorClass', 'StdAge', 'Sex',
   'DesignPrimaryPurpose', 'DesignAllocation', 'DesignMasking',
   'Condition', 'EnrollmentCount', 'EnrollmentType', 'LocationCountry',
+].join(',')
+
+// Extra text the target classifier reads. It is classified while streaming and then discarded (never kept in memory).
+const TARGET_FIELDS = FIELDS + ',' + [
+  'InterventionOtherName', 'ArmGroupLabel', 'ArmGroupDescription', 'ArmGroupType', 'BriefSummary', 'OfficialTitle', 'EligibilityCriteria',
+  'PrimaryOutcomeMeasure', 'PrimaryOutcomeDescription', 'SecondaryOutcomeMeasure', 'SecondaryOutcomeDescription', 'Keyword',
 ].join(',')
 
 function sleep(ms, signal) {
@@ -181,7 +192,55 @@ export function normalizeStudy(study) {
   }
 }
 
+/**
+ * Target search: resolve the target, pull candidates from ClinicalTrials.gov (synonyms via query.term, drug names via
+ * query.intr in chunks), de-dupe by NCT id under the same 20k cap, and classify every trial.
+ */
+async function fetchTargetStudies(query, { onProgress, signal } = {}) {
+  onProgress?.({ loaded: 0, total: 0, page: 0, phase: 'Resolving target synonyms and drug names…' })
+  const profile = await resolveTarget(query, { signal })
+  const cq = candidateQueries(profile)
+  const jobs = [{ param: 'query.term', value: cq.term, kind: 'synonyms' }, ...cq.intr.map(value => ({ param: 'query.intr', value, kind: 'drugs' }))].filter(j => j.value)
+  const cap = PAGE_SIZE * MAX_PAGES
+  const byId = new Map()
+  let seenTotal = 0, pageNum = 0, truncated = false, incomplete = null
+  const perQuery = []
+
+  outer: for (const job of jobs) {
+    let pageToken = null, first = true, newHere = 0
+    do {
+      const params = new URLSearchParams({ [job.param]: job.value, pageSize: String(PAGE_SIZE), fields: TARGET_FIELDS, countTotal: 'true' })
+      if (pageToken) params.set('pageToken', pageToken)
+      let data
+      try {
+        data = await fetchPage(`${BASE_URL}?${params}`, { signal, onRetry: r => onProgress?.({ loaded: byId.size, total: seenTotal, page: pageNum, retry: r }) })
+      } catch (e) {
+        if (byId.size > 0 && !(e instanceof FetchAbortedError)) { incomplete = e.message; break outer }
+        throw e
+      }
+      if (first) { seenTotal += data.totalCount ?? 0; perQuery.push({ kind: job.kind, count: data.totalCount ?? 0 }); first = false }
+      for (const st of data.studies ?? []) {
+        const id = st?.protocolSection?.identificationModule?.nctId
+        if (!id || byId.has(id)) continue
+        if (byId.size >= cap) { truncated = true; break outer }
+        const rec = normalizeStudy(st)
+        rec.target = classifyTrial(extractStudyText(st), profile)
+        byId.set(id, rec)
+        newHere++
+      }
+      pageToken = data.nextPageToken ?? null
+      pageNum++
+      onProgress?.({ loaded: byId.size, total: seenTotal, page: pageNum, phase: job.kind === 'drugs' ? 'Adding trials found by drug name…' : 'Loading trials matching the target…' })
+    } while (pageToken)
+    perQuery[perQuery.length - 1].added = newHere
+  }
+  // The union is at most seenTotal; if nothing was truncated the unique count is the real total.
+  const totalCount = truncated || incomplete ? Math.max(seenTotal, byId.size) : byId.size
+  return { records: [...byId.values()], totalCount, truncated, incomplete, profile, perQuery }
+}
+
 export async function fetchAllStudies(query, { field = 'intr', onProgress, signal } = {}) {
+  if (field === 'target') return fetchTargetStudies(query, { onProgress, signal })
   const fieldCfg = SEARCH_FIELDS[field] ?? SEARCH_FIELDS.intr
   const byId = new Map()
   let pageToken = null

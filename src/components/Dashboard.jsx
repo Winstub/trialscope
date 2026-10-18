@@ -6,6 +6,7 @@ import StatusDonutChart from './StatusDonutChart.jsx'
 import TimelineChart from './TimelineChart.jsx'
 import PhaseStatusMatrix from './PhaseStatusMatrix.jsx'
 import TrialTable from './TrialTable.jsx'
+import TargetPanel from './TargetPanel.jsx'
 import GroupedDimensionChart from './GroupedDimensionChart.jsx'
 import { aggregateStudies } from '../utils/api.js'
 import { ENROLLMENT_BINS, EMPTY_FILTERS, enrollmentBin, facet, hasFilters, isEnrollmentOutlier, topN } from '../utils/filters.js'
@@ -61,6 +62,7 @@ export default function Dashboard({ entry, filters, setFilters, filtered, sorted
   filters.cls.forEach(v => chips.push({ k: `c${v}`, label: cfg.labels[v] ?? v, remove: () => set({ cls: filters.cls.filter(x => x !== v) }) }))
   filters.country.forEach(v => chips.push({ k: `n${v}`, label: v, remove: () => set({ country: filters.country.filter(x => x !== v) }) }))
   filters.sponsor.forEach(v => chips.push({ k: `o${v}`, label: v, remove: () => set({ sponsor: filters.sponsor.filter(x => x !== v) }) }))
+  filters.label.forEach(v => chips.push({ k: `l${v}`, label: `Target: ${v}`, remove: () => set({ label: filters.label.filter(x => x !== v) }) }))
   filters.enr.forEach(v => chips.push({ k: `e${v}`, label: `Enrollment ${ENROLLMENT_BINS.find(b => b.key === v)?.label ?? v}`, remove: () => set({ enr: filters.enr.filter(x => x !== v) }) }))
   if (filters.yearFrom !== null || filters.yearTo !== null)
     chips.push({ k: 'y', label: `Started ${filters.yearFrom === filters.yearTo ? filters.yearFrom : `${filters.yearFrom ?? '…'}–${filters.yearTo ?? '…'}`}`, remove: () => set({ yearFrom: null, yearTo: null }) })
@@ -80,7 +82,9 @@ export default function Dashboard({ entry, filters, setFilters, filtered, sorted
         </div>
       )}
 
-      <KpiStrip query={entry.query} field={entry.field} records={filtered} unfilteredTotal={records.length} filters={filters}
+      {entry.field === 'target' && <TargetPanel entry={entry} filtered={filtered} filters={filters} onToggleLabel={toggle('label')} />}
+
+      <KpiStrip query={entry.query} field={entry.field} siteQuery={entry.siteQuery} records={filtered} unfilteredTotal={records.length} filters={filters}
         onFilter={(dim, vals) => set({ [dim]: vals })} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -110,7 +114,7 @@ export default function Dashboard({ entry, filters, setFilters, filtered, sorted
       <PhaseStatusMatrix phaseStatusMatrix={matrix} selectedPhases={filters.phase} selectedStatuses={filters.status} onCellClick={cellClick} />
 
       <TrialTable rows={sorted} totalBeforeFilter={records.length} sort={sort} dir={dir} onSort={onSort}
-        text={filters.text} onText={t => set({ text: t })} onExport={onExport} />
+        text={filters.text} onText={t => set({ text: t })} onExport={onExport} showTarget={entry.field === 'target'} />
 
       <div className="no-print">
         <h3 className="text-sm font-bold text-slate-800 mb-2 mt-2 flex items-center gap-2">

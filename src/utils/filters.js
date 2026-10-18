@@ -28,11 +28,11 @@ export function enrollmentBin(n) {
   return ENROLLMENT_BINS.find(b => b.min !== null && n >= b.min && n <= b.max)?.key ?? 'na'
 }
 
-export const EMPTY_FILTERS = { status: [], phase: [], cls: [], country: [], sponsor: [], enr: [], yearFrom: null, yearTo: null, text: '' }
+export const EMPTY_FILTERS = { status: [], phase: [], cls: [], country: [], sponsor: [], enr: [], label: [], yearFrom: null, yearTo: null, text: '' }
 
 export function hasFilters(f) {
   return f.status.length || f.phase.length || f.cls.length || f.country.length || f.sponsor.length ||
-    f.enr.length || f.yearFrom !== null || f.yearTo !== null || f.text.trim() !== ''
+    f.enr.length || f.label?.length || f.yearFrom !== null || f.yearTo !== null || f.text.trim() !== ''
 }
 
 export function matchesText(r, text) {
@@ -50,6 +50,7 @@ export function passes(r, f, skip = []) {
   if (!skip.includes('country') && f.country.length && !r.countries.some(c => f.country.includes(c))) return false
   if (!skip.includes('sponsor') && f.sponsor.length && !f.sponsor.includes(r.sponsor)) return false
   if (!skip.includes('enr')     && f.enr.length     && !f.enr.includes(enrollmentBin(r.enrollment))) return false
+  if (!skip.includes('label')   && f.label?.length   && !f.label.includes(r.target?.label)) return false
   if (!skip.includes('year') && (f.yearFrom !== null || f.yearTo !== null)) {
     if (r.startYear === null) return false
     if (f.yearFrom !== null && r.startYear < f.yearFrom) return false
@@ -90,9 +91,9 @@ export function median(values) {
 
 // ── URL state ────────────────────────────────────────────────────────────────
 
-/** "CAR-T" → {field:'intr'}; "cond:glioma" → {field:'cond'}; "term:x" → {field:'term'} */
+/** "CAR-T" → {field:'intr'}; "cond:glioma" → {field:'cond'}; "term:x" → {field:'term'}; "target:PD-1" → {field:'target'} */
 export function parseSearchToken(token) {
-  const m = /^(intr|cond|term):(.*)$/.exec(token)
+  const m = /^(intr|cond|term|target):(.*)$/.exec(token)
   if (m && m[2].trim()) return { field: m[1], query: m[2].trim() }
   return { field: 'intr', query: token.trim() }
 }
@@ -115,6 +116,7 @@ export function readUrlState(search = window.location.search) {
     filters: {
       status: p.getAll('status'), phase: p.getAll('phase'), cls: p.getAll('cls'),
       country: p.getAll('country'), sponsor: p.getAll('sponsor'), enr: p.getAll('enr'),
+      label: p.getAll('lbl').filter(l => ['Targets', 'Measures only', 'Unclear'].includes(l)),
       yearFrom: num('from'), yearTo: num('to'), text: p.get('tq') ?? '',
     },
     sort: p.get('sort'),
@@ -133,6 +135,7 @@ export function buildUrlSearch({ searches, tab, filters, sort, dir }) {
     filters.country.forEach(v => p.append('country', v))
     filters.sponsor.forEach(v => p.append('sponsor', v))
     filters.enr.forEach(v => p.append('enr', v))
+    ;(filters.label ?? []).forEach(v => p.append('lbl', v))
     if (filters.yearFrom !== null) p.set('from', String(filters.yearFrom))
     if (filters.yearTo !== null) p.set('to', String(filters.yearTo))
     if (filters.text.trim()) p.set('tq', filters.text.trim())

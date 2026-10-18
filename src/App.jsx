@@ -10,6 +10,7 @@ import { fetchAllStudies, aggregateStudies, formatDate, FetchAbortedError, SEARC
 import { EMPTY_FILTERS, applyFilters, buildUrlSearch, readUrlState, searchKey } from './utils/filters.js'
 import { csvCell, downloadBlob, slug } from './utils/format.js'
 import { SEARCH_COLORS } from './utils/constants.js'
+import { siteTerm } from './utils/targetResolve.js'
 
 const MAX_HISTORY = 8
 const MAX_SEARCHES = 10
@@ -24,6 +25,9 @@ const EXAMPLES = [
   { query: 'AAV gene therapy', field: 'intr' },
   { query: 'iPSC', field: 'term' },
   { query: 'NK cell', field: 'intr' },
+  { query: 'PD-1', field: 'target' },
+  { query: 'VEGF', field: 'target' },
+  { query: 'CD19', field: 'target' },
 ]
 
 const NUMERIC_SORTS = ['enrollment', 'start', 'end']
@@ -36,8 +40,10 @@ function loadHistory() {
 }
 
 function toCsv(rows, withSearch) {
+  const withTarget = rows.some(r => r.target)
   const head = [...(withSearch ? ['Search'] : []), 'NCT ID', 'URL', 'Title', 'Status', 'Phase', 'Lead sponsor', 'Sponsor class', 'Conditions',
-    'Enrollment', 'Enrollment type', 'Start date', 'Completion date', 'Countries', 'Intervention types', 'Routes']
+    'Enrollment', 'Enrollment type', 'Start date', 'Completion date', 'Countries', 'Intervention types', 'Routes',
+    ...(withTarget ? ['Target label', 'Target evidence'] : [])]
   const lines = [head.map(csvCell).join(',')]
   for (const r of rows) {
     lines.push([
@@ -45,6 +51,7 @@ function toCsv(rows, withSearch) {
       r.id, `https://clinicaltrials.gov/study/${r.id}`, r.title, r.status, r.phases.join('|'), r.sponsor, r.sponsorClass,
       r.conditions.join('; '), r.enrollment ?? '', r.enrollmentType ?? '', r.startDate ?? '', r.endDate ?? '',
       r.countries.join('; '), r.interventionTypes.join('; '), r.routes.join('; '),
+      ...(withTarget ? [r.target?.label ?? '', (r.target?.evidence ?? []).filter(e => e.role !== 'weak').slice(0, 3).map(e => `${e.where}: ${e.matched} (${e.note})`).join(' | ')] : []),
     ].map(csvCell).join(','))
   }
   return lines.join('\r\n')
@@ -98,7 +105,7 @@ export default function App() {
         data = await fetchAllStudies(search.query, {
           field: search.field,
           signal: controller.signal,
-          onProgress: p => { if (token === tokenRef.current) setProgress({ loaded: p.loaded, total: p.total, page: p.page, retry: p.retry ?? null }) },
+          onProgress: p => { if (token === tokenRef.current) setProgress({ loaded: p.loaded, total: p.total, page: p.page, retry: p.retry ?? null, phase: p.phase ?? null }) },
         })
         cacheRef.current.set(key, data)
       }
@@ -110,6 +117,7 @@ export default function App() {
       const entry = {
         id, key, query: search.query, field: search.field, records: data.records, stats: aggregateStudies(data.records),
         totalCount: data.totalCount, truncated: data.truncated, incomplete: data.incomplete,
+        profile: data.profile ?? null, siteQuery: data.profile ? siteTerm(data.profile) : null,
         color: SEARCH_COLORS[(id - 1) % SEARCH_COLORS.length],
       }
       const next = [...searchesRef.current, entry]
@@ -308,7 +316,7 @@ export default function App() {
         )}
 
         {loading && (
-          <LoadingProgress loaded={progress.loaded} total={progress.total} page={progress.page} retry={progress.retry} query={pending?.query ?? ''} onCancel={cancelLoading} />
+          <LoadingProgress loaded={progress.loaded} total={progress.total} page={progress.page} retry={progress.retry} phase={progress.phase} query={pending?.query ?? ''} onCancel={cancelLoading} />
         )}
         {loading && !hasResults && <DashboardSkeleton />}
 
@@ -382,7 +390,7 @@ export default function App() {
             <div>
               <h2 className="text-2xl font-bold tracking-tight text-slate-900">See the whole trial landscape in seconds</h2>
               <p className="text-sm text-slate-600 mt-2 max-w-xl mx-auto">
-                Search an intervention, condition or any term. TrialScope pulls every matching study from ClinicalTrials.gov and shows phases, status,
+                Search an intervention, condition, any term — or a molecular target (PD-1, VEGF, HER2…) to separate trials that hit it from trials that only measure it. TrialScope pulls every matching study from ClinicalTrials.gov and shows phases, status,
                 sponsors, countries, enrollment and start-year trends — then lets you click through to the underlying trials.
               </p>
             </div>
@@ -411,7 +419,7 @@ function ExampleChip({ ex, onClick }) {
   return (
     <button type="button" onClick={onClick}
       className="text-sm px-3.5 py-1.5 bg-white hover:bg-blue-50 text-slate-800 hover:text-blue-800 rounded-full font-medium transition-colors border border-slate-300 hover:border-blue-300 shadow-sm">
-      {ex.query}
+      {ex.query}{ex.field === 'target' && <span className="ml-1.5 text-[10px] uppercase tracking-wide text-emerald-700 font-semibold">target</span>}
     </button>
   )
 }

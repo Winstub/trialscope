@@ -6,7 +6,7 @@ import { STATUS_GROUP_CONFIG } from '../utils/constants.js'
 
 /** Count that links to the equivalent ClinicalTrials.gov search (new tab). */
 function CountLink({ search, group, count, className = '' }) {
-  const link = ctgovUrl({ query: search.query, field: search.field, statuses: group ? STATUS_GROUP_CONFIG[group].statuses : [] })
+  const link = ctgovUrl({ query: search.query, field: search.field, siteQuery: search.siteQuery, statuses: group ? STATUS_GROUP_CONFIG[group].statuses : [] })
   const t = ctgovTitle(count, link)
   return (
     <a href={link.url} target="_blank" rel="noopener" title={t} aria-label={t}

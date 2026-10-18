@@ -50,7 +50,7 @@ function Kpi({ icon: Icon, label, value, sub, tone = 'slate', onClick, active, t
 
 const OPEN = ['NOT_YET_RECRUITING', 'RECRUITING', 'ENROLLING_BY_INVITATION', 'AVAILABLE']
 
-export default function KpiStrip({ records, unfilteredTotal, filters, onFilter, query, field }) {
+export default function KpiStrip({ records, unfilteredTotal, filters, onFilter, query, field, siteQuery }) {
   const k = useMemo(() => {
     const n = records.length
     let open = 0, late = 0, industry = 0, enrollSum = 0, enrollN = 0, outliers = 0
@@ -74,7 +74,7 @@ export default function KpiStrip({ records, unfilteredTotal, filters, onFilter, 
 
   // ClinicalTrials.gov equivalents of what is currently shown (all active mappable filters applied)
   const openStatuses = filters.status.length ? OPEN.filter(s => filters.status.includes(s)) : OPEN
-  const base = { query, field }
+  const base = { query, field, siteQuery }
   const linkAll = ctgovUrl({ ...base, filters })
   const linkOpen = ctgovUrl({ ...base, filters: { ...filters, status: [] }, statuses: openStatuses })
   const linkLate = ctgovUrl({ ...base, filters: { ...filters, phase: ['PHASE3', 'PHASE4'] }, statuses: filters.status })
