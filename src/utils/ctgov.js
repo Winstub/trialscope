@@ -16,23 +16,26 @@ export const STATUS_CODES = {
 const PHASE_CODES = { EARLY_PHASE1: '0', PHASE1: '1', PHASE2: '2', PHASE3: '3', PHASE4: '4' }
 
 // App search field -> website query parameter
-const FIELD_PARAM = { intr: 'intr', cond: 'cond', term: 'term' }
+const FIELD_PARAM = { intr: 'intr', cond: 'cond', term: 'term', target: 'term' }
 
 /**
  * @param {object} o
  * @param {string} o.query   the user's search text
- * @param {string} o.field   'intr' | 'cond' | 'term'
+ * @param {string} o.field   'intr' | 'cond' | 'term' | 'target' (target: pass siteQuery, the resolved synonym/drug expression)
  * @param {string[]} [o.statuses]  API status enums to restrict to (omit/empty = any status)
  * @param {object} [o.filters]  dashboard filters (phase, country, sponsor, yearFrom/yearTo are mapped)
  * @returns {{ url: string, exact: boolean, unmapped: string[] }}
  *   exact=false when an active dashboard filter has no equivalent on the website.
  */
-export function ctgovUrl({ query, field = 'intr', statuses = [], filters = null }) {
+export function ctgovUrl({ query, field = 'intr', statuses = [], filters = null, siteQuery = null }) {
   const p = []
   const add = (k, v) => p.push(`${k}=${encodeURIComponent(v)}`)
-  if (query?.trim()) add(FIELD_PARAM[field] ?? 'term', query.trim())
+  // Target search: link to a free-text search for the target's synonyms + prominent drug names (the site can't apply our labels).
+  const q = field === 'target' ? (siteQuery ?? query) : query
+  if (q?.trim()) add(FIELD_PARAM[field] ?? 'term', q.trim())
 
   const unmapped = []
+  if (field === 'target') unmapped.push('Targets / Measures only / Unclear labels, and drug names beyond the first 25')
   const agg = []
   const effective = statuses.length ? statuses : (filters?.status ?? [])
   const codes = effective.map(s => STATUS_CODES[s]).filter(Boolean)
@@ -51,6 +54,7 @@ export function ctgovUrl({ query, field = 'intr', statuses = [], filters = null 
       const b = filters.yearTo !== null ? `${filters.yearTo}-12-31` : ''
       add('start', `${a}_${b}`)
     }
+    if (filters.label?.length) unmapped.push('target label filter')
     if (filters.cls.length) unmapped.push('sponsor type')
     if (filters.enr.length) unmapped.push('enrollment size')
     if (filters.text?.trim()) unmapped.push('table text filter')

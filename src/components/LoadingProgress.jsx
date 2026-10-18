@@ -20,7 +20,7 @@ export function DashboardSkeleton() {
   )
 }
 
-export default function LoadingProgress({ loaded, total, query, page, retry, onCancel }) {
+export default function LoadingProgress({ loaded, total, query, page, retry, onCancel, phase }) {
   const pct = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0
   return (
     <div className="card p-5" role="status" aria-live="polite">
@@ -34,8 +34,8 @@ export default function LoadingProgress({ loaded, total, query, page, retry, onC
             {retry
               ? `ClinicalTrials.gov asked us to slow down — retrying (attempt ${retry.attempt}) in ${Math.ceil(retry.waitMs / 1000)}s…`
               : total > 0
-                ? `${loaded.toLocaleString()} of ${total.toLocaleString()} studies loaded${page ? ` · page ${page}` : ''}`
-                : 'Contacting ClinicalTrials.gov…'}
+                ? `${loaded.toLocaleString()} ${phase ? 'unique studies loaded · ' : `of ${total.toLocaleString()} studies loaded`}${phase ?? ''}${!phase && page ? ` · page ${page}` : ''}`
+                : phase ?? 'Contacting ClinicalTrials.gov…'}
           </p>
         </div>
         {onCancel && (

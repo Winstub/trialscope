@@ -3,12 +3,15 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Search, ChevronLeft, Che
 import { PHASE_CONFIG, PHASE_ORDER, STATUS_CONFIG, STATUS_ORDER, DIMENSION_CONFIG } from '../utils/constants.js'
 import { formatDate } from '../utils/api.js'
 import { isEnrollmentOutlier } from '../utils/filters.js'
+import { LABELS } from '../utils/target.js'
+import TargetBadge from './TargetBadge.jsx'
 
 const PAGE_SIZE = 25
 
 const COLUMNS = [
   { key: 'id',         label: 'NCT ID' },
   { key: 'title',      label: 'Title' },
+  { key: 'label',      label: 'Target', targetOnly: true },
   { key: 'phase',      label: 'Phase' },
   { key: 'status',     label: 'Status' },
   { key: 'sponsor',    label: 'Sponsor' },
@@ -20,7 +23,7 @@ const COLUMNS = [
 
 const phaseRank = r => Math.max(...r.phases.map(p => PHASE_ORDER.indexOf(p)))
 const SORTERS = {
-  id: r => r.id, title: r => r.title.toLowerCase(), phase: phaseRank,
+  label: r => LABELS.indexOf(r.target?.label), id: r => r.id, title: r => r.title.toLowerCase(), phase: phaseRank,
   status: r => STATUS_ORDER.indexOf(r.status), sponsor: r => r.sponsor.toLowerCase(),
   enrollment: r => r.enrollment, start: r => r.startTs, end: r => r.endTs,
 }
@@ -78,7 +81,8 @@ function Enroll({ r }) {
   return <span title={r.enrollmentType === 'ESTIMATED' ? 'Estimated enrollment' : 'Actual enrollment'}>{r.enrollment.toLocaleString()}{r.enrollmentType === 'ESTIMATED' && <span className="text-slate-500">*</span>}</span>
 }
 
-export default function TrialTable({ rows, totalBeforeFilter, sort, dir, onSort, text, onText, onExport }) {
+export default function TrialTable({ rows, totalBeforeFilter, sort, dir, onSort, text, onText, onExport, showTarget = false }) {
+  const columns = COLUMNS.filter(c => showTarget || !c.targetOnly)
   const [page, setPage] = useState(0)
   const [draft, setDraft] = useState(text)
   useEffect(() => { setDraft(text) }, [text])
@@ -116,7 +120,7 @@ export default function TrialTable({ rows, totalBeforeFilter, sort, dir, onSort,
             <table className="w-full text-[13px]">
               <thead className="bg-slate-50 text-xs text-slate-600">
                 <tr>
-                  {COLUMNS.map(c => {
+                  {columns.map(c => {
                     const active = sort === c.key
                     return (
                       <th key={c.key} scope="col" aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
@@ -142,6 +146,7 @@ export default function TrialTable({ rows, totalBeforeFilter, sort, dir, onSort,
                       </a>
                     </td>
                     <td className="px-2.5 py-2.5 min-w-[200px] max-w-xs text-slate-900"><span className="line-clamp-2" title={r.title}>{r.title}</span></td>
+                    {showTarget && <td className="px-2.5 py-2.5"><TargetBadge target={r.target} /></td>}
                     <td className="px-2.5 py-2.5"><PhaseChips phases={r.phases} /></td>
                     <td className="px-2.5 py-2.5"><StatusBadge status={r.status} /></td>
                     <td className="px-2.5 py-2.5 min-w-[130px] max-w-[170px]">
@@ -166,7 +171,7 @@ export default function TrialTable({ rows, totalBeforeFilter, sort, dir, onSort,
               <label htmlFor="m-sort">Sort</label>
               <select id="m-sort" value={sort ?? ''} onChange={e => onSort(e.target.value || null, true)} className="rounded-lg border border-slate-300 bg-white py-1 px-2 text-xs">
                 <option value="">Relevance</option>
-                {COLUMNS.filter(c => !c.nosort).map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+                {columns.filter(c => !c.nosort).map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
               </select>
               <button type="button" onClick={() => sort && onSort(sort)} className="p-1 rounded border border-slate-300 bg-white" aria-label={`Sort direction: ${dir === 'asc' ? 'ascending' : 'descending'}. Toggle`}>
                 {dir === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
@@ -178,7 +183,7 @@ export default function TrialTable({ rows, totalBeforeFilter, sort, dir, onSort,
                   <a href={`https://clinicaltrials.gov/study/${r.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-blue-700">
                     {r.id}<ExternalLink className="w-3 h-3" aria-hidden="true" />
                   </a>
-                  <StatusBadge status={r.status} />
+                  <span className="flex items-center gap-2">{showTarget && <TargetBadge target={r.target} />}<StatusBadge status={r.status} /></span>
                 </div>
                 <p className="text-sm font-medium text-slate-900 leading-snug">{r.title}</p>
                 <div className="flex flex-wrap items-center gap-2"><PhaseChips phases={r.phases} /><span className="text-xs text-slate-600">{r.sponsor}</span></div>
